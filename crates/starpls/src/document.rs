@@ -201,6 +201,8 @@ pub(crate) struct DefaultFileLoader {
     cached_load_results: DashMap<String, PathBuf>,
     fetch_repo_sender: Sender<Task>,
     bzlmod_enabled: bool,
+    load_prefix: Option<String>,
+    extensions: Arc<starpls_common::Extensions>,
 }
 
 impl DefaultFileLoader {
@@ -222,7 +224,14 @@ impl DefaultFileLoader {
             cached_load_results: Default::default(),
             fetch_repo_sender,
             bzlmod_enabled,
+            load_prefix: None,
+            extensions: Arc::new(starpls_common::Extensions::new()),
         }
+    }
+
+    pub(crate) fn with_extensions(mut self, extensions: Arc<starpls_common::Extensions>) -> Self {
+        self.extensions = extensions;
+        self
     }
 
     fn make_cache_key(&self, repo_kind: &RepoKind, path: &str, from: FileId) -> String {
@@ -381,6 +390,97 @@ impl DefaultFileLoader {
     }
 }
 
+/// Create virtual file content from a list of symbols.
+/// This generates Starlark code that defines the functions/variables.
+fn create_virtual_file_content(symbols: &[starpls_common::Symbol]) -> String {
+    let mut content = String::new();
+    content.push_str("# Virtual module - generated from extension\n\n");
+
+    for symbol in symbols {
+        if !symbol.properties.is_empty() {
+            // Object with properties: generate struct
+            if !symbol.doc.is_empty() {
+                content.push_str(&format!("# {}\n", symbol.doc));
+            }
+            content.push_str(&format!("{} = struct(\n", symbol.name));
+            for (prop_name, prop_symbol) in &symbol.properties {
+                if prop_symbol.r#type == "function" && prop_symbol.callable.is_some() {
+                    // Generate proper function with signature
+                    let callable = prop_symbol.callable.as_ref().unwrap();
+                    let params: Vec<String> = callable
+                        .params
+                        .iter()
+                        .map(|p| {
+                            if p.default_value.is_empty() {
+                                p.name.clone()
+                            } else {
+                                format!("{} = {}", p.name, p.default_value)
+                            }
+                        })
+                        .collect();
+                    content.push_str(&format!(
+                        "    {} = lambda {}: None,\n",
+                        prop_name,
+                        params.join(", ")
+                    ));
+                } else {
+                    content.push_str(&format!("    {} = lambda *a, **k: None,\n", prop_name));
+                }
+            }
+            content.push_str(")\n\n");
+        } else {
+            match symbol.r#type.as_str() {
+                "function" => {
+                    if let Some(callable) = &symbol.callable {
+                        content.push_str(&format!("def {}(", symbol.name));
+
+                        let params: Vec<String> = callable
+                            .params
+                            .iter()
+                            .map(|p| {
+                                if p.default_value.is_empty() {
+                                    p.name.clone()
+                                } else {
+                                    format!("{} = {}", p.name, p.default_value)
+                                }
+                            })
+                            .collect();
+
+                        content.push_str(&params.join(", "));
+                        content.push_str("):\n");
+
+                        if !symbol.doc.is_empty() {
+                            content.push_str(&format!("    \"\"\"{}\"\"\"\n", symbol.doc));
+                        }
+
+                        content.push_str("    pass  # Virtual function\n\n");
+                    } else {
+                        // Function without signature info
+                        content.push_str(&format!("def {}():\n", symbol.name));
+                        if !symbol.doc.is_empty() {
+                            content.push_str(&format!("    \"\"\"{}\"\"\"\n", symbol.doc));
+                        }
+                        content.push_str("    pass  # Virtual function\n\n");
+                    }
+                }
+                _ => {
+                    // Variables, constants, etc.
+                    content.push_str(&format!(
+                        "{} = None  # Virtual {}\n",
+                        symbol.name, symbol.r#type
+                    ));
+                    if !symbol.doc.is_empty() {
+                        content.push_str(&format!("# {}\n", symbol.doc));
+                    }
+                    content.push('\n');
+                }
+            }
+        }
+    }
+
+    content
+}
+
 impl FileLoader for DefaultFileLoader {
     fn resolve_path(
         &self,
@@ -442,14 +542,57 @@ impl FileLoader for DefaultFileLoader {
         dialect: Dialect,
         from: FileId,
     ) -> anyhow::Result<Option<LoadFileResult>> {
+        // Check for virtual modules first (only for Standard dialect)
+        if dialect == Dialect::Standard {
+            let from_path = self.interner.lookup_by_file_id(from);
+            if let Some(symbols) = self.extensions.virtual_module(path, &from_path) {
+                // Create a virtual file with the module's symbols
+                let virtual_content = create_virtual_file_content(symbols);
+
+                // Create a virtual file ID based on the path
+                let virtual_path = PathBuf::from(format!("virtual://{}", path));
+                let file_id = self.interner.intern_path(virtual_path);
+
+                return Ok(Some(LoadFileResult {
+                    file_id,
+                    dialect,
+                    info: None,
+                    contents: Some(virtual_content),
+                }));
+            }
+        }
+
         let (path, info, canonical_repo) = match dialect {
             Dialect::Standard => {
                 // Find the importing file's directory.
                 let mut from_path = self.interner.lookup_by_file_id(from);
                 assert!(from_path.pop());
 
+                // Apply load_prefix from extensions if configured for this file
+                let full_from_path = self.interner.lookup_by_file_id(from);
+                let resolved_path =
+                    if let Some(prefix) = self.extensions.load_prefix_for_file(&full_from_path) {
+                        // Use extension-specific prefix
+                        let prefixed_path = if path.is_empty() {
+                            format!("{}/", prefix.trim_end_matches('/'))
+                        } else {
+                            format!("{}/{}", prefix.trim_end_matches('/'), path)
+                        };
+                        from_path.join(prefixed_path)
+                    } else if let Some(ref prefix) = self.load_prefix {
+                        // Fall back to global prefix (for backward compatibility)
+                        let prefixed_path = if path.is_empty() {
+                            format!("{}/", prefix.trim_end_matches('/'))
+                        } else {
+                            format!("{}/{}", prefix.trim_end_matches('/'), path)
+                        };
+                        from_path.join(prefixed_path)
+                    } else {
+                        from_path.join(path)
+                    };
+
                 // Resolve the given path relative to the importing file's directory.
-                (from_path.join(path).canonicalize()?, None, None)
+                (resolved_path.canonicalize()?, None, None)
             }
             Dialect::Bazel => {
                 // Parse the load path as a Bazel label.
