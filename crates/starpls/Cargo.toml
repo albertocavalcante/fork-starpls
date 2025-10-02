@@ -20,6 +20,7 @@ serde_json = "1.0.108"
 starpls_bazel = { path = "../starpls_bazel" }
 starpls_common = { path = "../starpls_common" }
 starpls_syntax = { path = "../starpls_syntax" }
+starpls_hir = { path = "../starpls_hir" }
 starpls_ide = { path = "../starpls_ide" }
 parking_lot = "0.12.1"
 clap = { version = "4.5.4", features = ["derive"] }
@@ -28,3 +29,7 @@ log = "0.4.22"
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 walkdir = "2.5.0"
+regex = "1.10.2"
+
+[dev-dependencies]
+tempfile = "3.0"
