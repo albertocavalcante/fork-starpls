@@ -2,9 +2,9 @@ name: Feature Branch Build - Extensible Dialect Support
 
 on:
   push:
-    branches: ["feature/extensible-dialect-support"]
+    branches: ["feature/extensible-dialect-support", "feature/extension-system-minimal"]
   pull_request:
-    branches: ["feature/extensible-dialect-support"]
+    branches: ["feature/extensible-dialect-support", "feature/extension-system-minimal"]
 
 env:
   CARGO_TERM_COLOR: always
