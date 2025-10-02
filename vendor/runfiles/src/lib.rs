@@ -44,7 +44,7 @@ const TEST_SRCDIR_ENV_VAR: &str = "TEST_SRCDIR";
 #[macro_export]
 macro_rules! rlocation {
     ($r:expr, $path:expr) => {
-        $r.rlocation_from($path, env!("REPOSITORY_NAME"))
+        $r.rlocation_from($path, option_env!("REPOSITORY_NAME").unwrap_or("_main"))
     };
 }
 
@@ -419,8 +419,14 @@ mod test {
         // concurrently. Rust runs tests in parallel and does not provide an easy way to synchronise
         // them, so we run all test cases in the same #[test] function.
 
-        let test_srcdir =
-            env::var_os(TEST_SRCDIR_ENV_VAR).expect("bazel did not provide TEST_SRCDIR");
+        // Skip this test if we're not running under Bazel
+        let test_srcdir = match env::var_os(TEST_SRCDIR_ENV_VAR) {
+            Some(val) => val,
+            None => {
+                eprintln!("Skipping test_can_read_data_from_runfiles: not running under Bazel");
+                return;
+            }
+        };
         let runfiles_dir =
             env::var_os(RUNFILES_DIR_ENV_VAR).expect("bazel did not provide RUNFILES_DIR");
         let runfiles_manifest_file = env::var_os(MANIFEST_FILE_ENV_VAR).unwrap_or("".into());
@@ -463,7 +469,13 @@ mod test {
 
     #[test]
     fn test_parse_repo_mapping() {
-        let temp_dir = PathBuf::from(std::env::var("TEST_TMPDIR").unwrap());
+        let temp_dir = match std::env::var("TEST_TMPDIR") {
+            Ok(dir) => PathBuf::from(dir),
+            Err(_) => {
+                eprintln!("Skipping test_parse_repo_mapping: not running under Bazel");
+                return;
+            }
+        };
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         let valid = temp_dir.join("test_parse_repo_mapping.txt");
@@ -527,7 +539,13 @@ mod test {
 
     #[test]
     fn test_parse_repo_mapping_invalid_file() {
-        let temp_dir = PathBuf::from(std::env::var("TEST_TMPDIR").unwrap());
+        let temp_dir = match std::env::var("TEST_TMPDIR") {
+            Ok(dir) => PathBuf::from(dir),
+            Err(_) => {
+                eprintln!("Skipping test_parse_repo_mapping_invalid_file: not running under Bazel");
+                return;
+            }
+        };
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         let invalid = temp_dir.join("test_parse_repo_mapping_invalid_file.txt");

@@ -83,7 +83,9 @@ impl Extensions {
             .iter()
             .flat_map(|ext| &ext.modules)
             .flat_map(|(module_name, symbols)| {
-                symbols.iter().map(move |symbol| (module_name.as_str(), symbol))
+                symbols
+                    .iter()
+                    .map(move |symbol| (module_name.as_str(), symbol))
             })
     }
 }

@@ -12,8 +12,10 @@ This module parses type expressions like:
 
 use std::fmt;
 
-use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypeExpr {
@@ -54,22 +56,31 @@ impl fmt::Display for TypeExpr {
             TypeExpr::Tuple(types) => {
                 write!(f, "tuple<")?;
                 for (i, ty) in types.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", ty)?;
                 }
                 write!(f, ">")
             }
             TypeExpr::Union(types) => {
                 for (i, ty) in types.iter().enumerate() {
-                    if i > 0 { write!(f, " | ")?; }
+                    if i > 0 {
+                        write!(f, " | ")?;
+                    }
                     write!(f, "{}", ty)?;
                 }
                 Ok(())
             }
-            TypeExpr::Function { params, return_type } => {
+            TypeExpr::Function {
+                params,
+                return_type,
+            } => {
                 write!(f, "function(")?;
                 for (i, param) in params.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", param)?;
                 }
                 write!(f, ") -> {}", return_type)
@@ -124,9 +135,21 @@ impl TypeExpr {
 
     /// Check if a type name is a primitive Starlark type.
     fn is_primitive_type(name: &str) -> bool {
-        matches!(name,
-            "any" | "string" | "int" | "bool" | "float" | "bytes" |
-            "None" | "NoneType" | "list" | "dict" | "tuple" | "set" | "range"
+        matches!(
+            name,
+            "any"
+                | "string"
+                | "int"
+                | "bool"
+                | "float"
+                | "bytes"
+                | "None"
+                | "NoneType"
+                | "list"
+                | "dict"
+                | "tuple"
+                | "set"
+                | "range"
         )
     }
 
@@ -147,7 +170,9 @@ impl TypeExpr {
         match base {
             "list" => {
                 if args_str.is_empty() {
-                    Ok(TypeExpr::List(Box::new(TypeExpr::Primitive("any".to_string()))))
+                    Ok(TypeExpr::List(Box::new(TypeExpr::Primitive(
+                        "any".to_string(),
+                    ))))
                 } else {
                     Ok(TypeExpr::List(Box::new(Self::parse(args_str)?)))
                 }
@@ -170,7 +195,10 @@ impl TypeExpr {
                         Box::new(Self::parse(&args[1])?),
                     ))
                 } else {
-                    Err(anyhow!("dict type expects 0-2 type arguments, got {}", args.len()))
+                    Err(anyhow!(
+                        "dict type expects 0-2 type arguments, got {}",
+                        args.len()
+                    ))
                 }
             }
             "tuple" => {
@@ -178,7 +206,7 @@ impl TypeExpr {
                 let types: Result<Vec<_>> = args.iter().map(|arg| Self::parse(arg)).collect();
                 Ok(TypeExpr::Tuple(types?))
             }
-            _ => Err(anyhow!("Unknown generic type: {}", base))
+            _ => Err(anyhow!("Unknown generic type: {}", base)),
         }
     }
 
@@ -219,8 +247,8 @@ impl TypeExpr {
         };
 
         // Parse return type
-        let return_type = if rest.starts_with("-> ") {
-            Self::parse(&rest[3..])?
+        let return_type = if let Some(stripped) = rest.strip_prefix("-> ") {
+            Self::parse(stripped)?
         } else if rest.is_empty() {
             TypeExpr::Primitive("None".to_string())
         } else {
@@ -284,9 +312,18 @@ mod tests {
 
     #[test]
     fn test_primitive_types() {
-        assert_eq!(TypeExpr::parse("string").unwrap(), TypeExpr::Primitive("string".to_string()));
-        assert_eq!(TypeExpr::parse("int").unwrap(), TypeExpr::Primitive("int".to_string()));
-        assert_eq!(TypeExpr::parse("any").unwrap(), TypeExpr::Primitive("any".to_string()));
+        assert_eq!(
+            TypeExpr::parse("string").unwrap(),
+            TypeExpr::Primitive("string".to_string())
+        );
+        assert_eq!(
+            TypeExpr::parse("int").unwrap(),
+            TypeExpr::Primitive("int".to_string())
+        );
+        assert_eq!(
+            TypeExpr::parse("any").unwrap(),
+            TypeExpr::Primitive("any".to_string())
+        );
     }
 
     #[test]

@@ -453,13 +453,15 @@ fn inject_extension_globals(builtins: &mut Builtins, extensions: &starpls_common
     }
 }
 
-
 /// Process an extension symbol that defines a type, converting it to proper type system objects.
 /// Returns (type_name, protobuf_type_definition) for registration in the builtin system.
 fn process_extension_symbol_as_type(
     symbol: &starpls_common::Symbol,
 ) -> Option<(String, starpls_bazel::builtin::Type)> {
-    use starpls_bazel::builtin::{Type, Value, Callable, Param};
+    use starpls_bazel::builtin::Callable;
+    use starpls_bazel::builtin::Param;
+    use starpls_bazel::builtin::Type;
+    use starpls_bazel::builtin::Value;
 
     if !symbol.is_type_definition() {
         return None;
