@@ -81,6 +81,17 @@ pub trait Db: salsa::DbWithJar<Jar> {
         contents: String,
     ) -> File;
 
+    /// Creates a `File` in the database with path information for extension processing.
+    /// This will overwrite the currently active `File` for the given `FileId`, if it exists.
+    fn create_file_with_path(
+        &mut self,
+        file_id: FileId,
+        file_path: &str,
+        dialect: Dialect,
+        info: Option<FileInfo>,
+        contents: String,
+    ) -> File;
+
     /// Sets the contents the `File` identified by the given `FileId`. Has no affect
     /// if the file doesn't exist.
     fn update_file(&mut self, file_id: FileId, contents: String);

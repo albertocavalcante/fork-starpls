@@ -121,28 +121,38 @@ impl<'a> Resolver<'a> {
     }
 
     pub(crate) fn resolve_name_in_prelude_or_builtins(&self, name: &Name) -> Option<ScopeDef> {
-        let mut def = None;
+        // 1. FIRST: Check file-specific extension prelude
+        if let Some(prelude_file_id) = self.db.get_file_prelude(self.file.id(self.db)) {
+            if let Some(prelude_file) = self.db.get_file(prelude_file_id) {
+                if let Some(def) = Self::new_for_module(self.db, prelude_file).resolve_name_from_prelude(name) {
+                    return Some(def);
+                }
+            }
+        }
 
-        // Check prelude if this is a BUILD file.
+        // 2. SECOND: Check Bazel prelude for BUILD files (existing logic)
         if self.file.api_context(self.db) == Some(APIContext::Build) {
-            def = self
+            if let Some(def) = self
                 .db
                 .get_bazel_prelude_file()
                 .and_then(|prelude_file_id| {
                     let prelude_file = self.db.get_file(prelude_file_id)?;
                     Self::new_for_module(self.db, prelude_file).resolve_name_from_prelude(name)
-                })
+                }) {
+                return Some(def);
+            }
         }
 
-        // Otherwise, check the builtins scope.
-        def.or_else(|| {
-            intrinsic_functions(self.db)
-                .functions(self.db)
-                .get(name)
-                .copied()
-                .map(ScopeDef::IntrinsicFunction)
-        })
-        .or_else(|| self.resolve_name_in_builtin_globals(name))
+        // 3. THIRD: Check intrinsics (existing logic)
+        if let Some(func) = intrinsic_functions(self.db)
+            .functions(self.db)
+            .get(name)
+            .copied() {
+            return Some(ScopeDef::IntrinsicFunction(func));
+        }
+
+        // 4. FOURTH: Check builtin globals (existing logic)
+        self.resolve_name_in_builtin_globals(name)
     }
 
     fn resolve_name_in_builtin_globals(&self, name: &Name) -> Option<ScopeDef> {

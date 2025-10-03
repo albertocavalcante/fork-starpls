@@ -1,6 +1,6 @@
 # Starpls Development Makefile
 
-.PHONY: build test fmt clean run dev-build check
+.PHONY: build test fmt clean run dev-build check install uninstall
 
 # Default target
 all: build
@@ -51,7 +51,29 @@ dev: fmt build-starpls
 
 # Run starpls with common development flags
 run:
-	./bazel-bin/crates/starpls/starpls server
+	bazel run //crates/starpls:starpls -- server
+
+# Variables for installation paths
+PREFIX ?= $(HOME)/.local
+BINDIR = $(PREFIX)/bin
+
+# Install starpls to local bin directory
+install: dev-build
+	@echo "Installing starpls to $(BINDIR)/starpls..."
+	@mkdir -p $(BINDIR)
+	@BAZEL_BIN=$$(bazel info bazel-bin) && \
+	BINARY_PATH="$$BAZEL_BIN/crates/starpls/starpls" && \
+	TARGET="$(BINDIR)/starpls" && \
+	cp "$$BINARY_PATH" "$$TARGET.tmp" && \
+	chmod +x "$$TARGET.tmp" && \
+	mv "$$TARGET.tmp" "$$TARGET" && \
+	echo "✓ starpls installed successfully!"
+	@echo "Make sure $(BINDIR) is in your PATH"
+
+# Uninstall starpls from local bin directory
+uninstall:
+	@rm -f $(BINDIR)/starpls
+	@echo "✓ starpls uninstalled"
 
 # Help target
 help:
@@ -68,4 +90,6 @@ help:
 	@echo "  dev-build     - Optimized build"
 	@echo "  dev           - Format and build (development cycle)"
 	@echo "  run           - Run starpls server"
+	@echo "  install       - Install starpls to \$$PREFIX/bin (default: ~/.local/bin)"
+	@echo "  uninstall     - Remove starpls from \$$PREFIX/bin"
 	@echo "  help          - Show this help"

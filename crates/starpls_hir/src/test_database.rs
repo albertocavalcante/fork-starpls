@@ -24,15 +24,29 @@ use crate::Dialect;
 use crate::GlobalContext;
 use crate::InferenceOptions;
 
-#[derive(Default)]
 #[salsa::db(starpls_common::Jar, crate::Jar)]
 pub(crate) struct TestDatabase {
     builtin_defs: Arc<DashMap<Dialect, BuiltinDefs>>,
     storage: salsa::Storage<Self>,
     files: Arc<DashMap<FileId, File>>,
     prelude_file: Option<FileId>,
+    file_preludes: Arc<DashMap<FileId, FileId>>,
     all_workspace_targets: Arc<Vec<String>>,
     pub(crate) gcx: Arc<GlobalContext>,
+}
+
+impl Default for TestDatabase {
+    fn default() -> Self {
+        Self {
+            builtin_defs: Default::default(),
+            storage: Default::default(),
+            files: Default::default(),
+            prelude_file: None,
+            file_preludes: Arc::new(DashMap::new()),
+            all_workspace_targets: Arc::default(),
+            gcx: Arc::new(GlobalContext::new(InferenceOptions::default())),
+        }
+    }
 }
 
 impl salsa::Database for TestDatabase {}
@@ -54,6 +68,18 @@ impl starpls_common::Db for TestDatabase {
         if let Some(file) = self.files.get(&file_id).map(|file_id| *file_id) {
             file.set_contents(self).to(contents);
         }
+    }
+
+    fn create_file_with_path(
+        &mut self,
+        file_id: FileId,
+        _file_path: &str,
+        dialect: Dialect,
+        info: Option<FileInfo>,
+        contents: String,
+    ) -> File {
+        // For test database, just delegate to create_file (no extension processing)
+        self.create_file(file_id, dialect, info, contents)
     }
 
     fn load_file(
@@ -138,6 +164,18 @@ impl crate::Db for TestDatabase {
 
     fn get_all_workspace_targets(&self) -> Arc<Vec<String>> {
         Arc::clone(&self.all_workspace_targets)
+    }
+
+    fn set_file_prelude(&mut self, file_id: FileId, prelude_id: FileId) {
+        self.file_preludes.insert(file_id, prelude_id);
+    }
+
+    fn get_file_prelude(&self, file_id: FileId) -> Option<FileId> {
+        self.file_preludes.get(&file_id).map(|p| *p)
+    }
+
+    fn clear_file_prelude(&mut self, file_id: FileId) {
+        self.file_preludes.remove(&file_id);
     }
 }
 

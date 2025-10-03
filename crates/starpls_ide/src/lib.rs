@@ -64,6 +64,7 @@ pub(crate) struct Database {
     loader: Arc<dyn FileLoader>,
     gcx: Arc<GlobalContext>,
     prelude_file: Option<FileId>,
+    file_preludes: Arc<DashMap<FileId, FileId>>,  // file_id -> prelude_file_id
     all_workspace_targets: Arc<Vec<String>>,
 }
 
@@ -79,6 +80,14 @@ impl Database {
                     contents,
                 } => {
                     self.create_file(file_id, dialect, info, contents);
+                }
+                FileChange::CreateWithPath {
+                    file_path,
+                    dialect,
+                    info,
+                    contents,
+                } => {
+                    self.create_file_with_path(file_id, &file_path, dialect, info, contents);
                 }
                 FileChange::Update { contents } => {
                     self.update_file(file_id, contents);
@@ -99,6 +108,7 @@ impl salsa::ParallelDatabase for Database {
             loader: self.loader.clone(),
             storage: self.storage.snapshot(),
             prelude_file: self.prelude_file,
+            file_preludes: self.file_preludes.clone(),
             all_workspace_targets: self.all_workspace_targets.clone(),
         })
     }
@@ -121,6 +131,37 @@ impl starpls_common::Db for Database {
         if let Some(file) = self.files.get(&file_id).map(|file_id| *file_id) {
             file.set_contents(self).to(contents);
         }
+    }
+
+    fn create_file_with_path(
+        &mut self,
+        file_id: FileId,
+        file_path: &str,
+        dialect: Dialect,
+        info: Option<FileInfo>,
+        contents: String,
+    ) -> File {
+        // Create the main file
+        let file = File::new(self, file_id, dialect, info, contents);
+        self.files.insert(file_id, file);
+
+        // Check if we have extensions and generate prelude if needed
+        if let Some(extensions) = self.loader.extensions() {
+            use std::path::Path;
+            let path = Path::new(file_path);
+            if let Some(prelude_content) = extensions.generate_prelude_for_file(path) {
+                // Create a virtual prelude file with a unique ID
+                // Use a large base number and add the current file_id to ensure uniqueness
+                let prelude_file_id = FileId(1_000_000 + file_id.0);
+                let prelude_file = File::new(self, prelude_file_id, dialect, None, prelude_content);
+                self.files.insert(prelude_file_id, prelude_file);
+
+                // Associate the prelude with this file
+                self.set_file_prelude(file_id, prelude_file_id);
+            }
+        }
+
+        file
     }
 
     fn load_file(
@@ -242,11 +283,29 @@ impl starpls_hir::Db for Database {
     fn gcx(&self) -> &GlobalContext {
         &self.gcx
     }
+
+    fn set_file_prelude(&mut self, file_id: FileId, prelude_id: FileId) {
+        self.file_preludes.insert(file_id, prelude_id);
+    }
+
+    fn get_file_prelude(&self, file_id: FileId) -> Option<FileId> {
+        self.file_preludes.get(&file_id).map(|p| *p)
+    }
+
+    fn clear_file_prelude(&mut self, file_id: FileId) {
+        self.file_preludes.remove(&file_id);
+    }
 }
 
 #[derive(Debug)]
 enum FileChange {
     Create {
+        dialect: Dialect,
+        info: Option<FileInfo>,
+        contents: String,
+    },
+    CreateWithPath {
+        file_path: String,
         dialect: Dialect,
         info: Option<FileInfo>,
         contents: String,
@@ -285,6 +344,25 @@ impl Change {
         self.changed_files
             .push((file_id, FileChange::Update { contents }))
     }
+
+    pub fn create_file_with_path(
+        &mut self,
+        file_id: FileId,
+        file_path: String,
+        dialect: Dialect,
+        info: Option<FileInfo>,
+        contents: String,
+    ) {
+        self.changed_files.push((
+            file_id,
+            FileChange::CreateWithPath {
+                file_path,
+                dialect,
+                info,
+                contents,
+            },
+        ))
+    }
 }
 
 /// Provides the main API for querying facts about the source code. This wraps the main `Database` struct.
@@ -302,6 +380,7 @@ impl Analysis {
                 storage: Default::default(),
                 loader,
                 prelude_file: None,
+                file_preludes: Arc::new(DashMap::new()),
                 all_workspace_targets: Arc::default(),
             },
         }
@@ -470,6 +549,11 @@ pub trait FileLoader: Send + Sync + 'static {
 
     /// If the specified file is a BUILD file, returns its package.
     fn resolve_build_file(&self, file_id: FileId) -> Option<String>;
+
+    /// Returns the extensions loaded in this FileLoader, if any.
+    fn extensions(&self) -> Option<&starpls_common::Extensions> {
+        None
+    }
 }
 
 /// Simple implementation of [`FileLoader`] backed by a HashMap.
@@ -524,6 +608,10 @@ impl FileLoader for SimpleFileLoader {
     }
 
     fn resolve_build_file(&self, _file_id: FileId) -> Option<String> {
+        None
+    }
+
+    fn extensions(&self) -> Option<&starpls_common::Extensions> {
         None
     }
 }

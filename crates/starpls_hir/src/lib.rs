@@ -116,6 +116,11 @@ pub trait Db: salsa::DbWithJar<Jar> + starpls_common::Db {
 
     fn set_bazel_prelude_file(&mut self, file_id: FileId);
     fn get_bazel_prelude_file(&self) -> Option<FileId>;
+
+    // File-specific prelude methods for extensions
+    fn set_file_prelude(&mut self, file_id: FileId, prelude_id: FileId);
+    fn get_file_prelude(&self, file_id: FileId) -> Option<FileId>;
+    fn clear_file_prelude(&mut self, file_id: FileId);
     fn set_all_workspace_targets(&mut self, targets: Vec<String>);
     fn get_all_workspace_targets(&self) -> Arc<Vec<String>>;
 }

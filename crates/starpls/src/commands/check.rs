@@ -48,6 +48,10 @@ pub(crate) struct CheckCommand {
     #[clap(long = "ext")]
     pub(crate) extensions: Vec<String>,
 
+    /// Load extension files with symbols, virtual modules, and configuration
+    #[clap(long = "experimental_load_extensions", value_name = "FILE")]
+    pub(crate) extension_files: Vec<std::path::PathBuf>,
+
     #[command(flatten)]
     pub(crate) inference_options: InferenceOptions,
 }
@@ -57,7 +61,16 @@ impl CheckCommand {
         let bazel_client = Arc::new(BazelCLI::default());
         let bazel_cx = BazelContext::new(&*bazel_client)
             .map_err(|err| anyhow!("failed to initialize Bazel context: {}", err))?;
+        // Load extensions
+        let extensions = Arc::new(if !self.extension_files.is_empty() {
+            starpls_common::load_extensions(&self.extension_files)?
+        } else {
+            starpls_common::Extensions::new()
+        });
+
+        // Load base builtins (extensions now handled via file-specific preludes)
         let builtins = load_bazel_builtins();
+
         let (fetch_repo_sender, _) = crossbeam_channel::unbounded();
         let interner = Arc::new(PathInterner::default());
         let loader = DefaultFileLoader::new(
@@ -68,7 +81,8 @@ impl CheckCommand {
             bazel_cx.info.output_base.join("external"),
             fetch_repo_sender,
             bazel_cx.bzlmod_enabled,
-        );
+        )
+        .with_extensions(extensions.clone());
 
         let mut analysis = Analysis::new(
             Arc::new(loader),
@@ -83,7 +97,7 @@ impl CheckCommand {
 
         // Strip off the leading "." from each of the specified extensions.
         // This works better when filtering against files with .extension().
-        let extensions = self
+        let file_extensions = self
             .extensions
             .iter()
             .map(|ext| match ext.strip_prefix('.') {
@@ -99,7 +113,7 @@ impl CheckCommand {
             interner,
             self.paths,
             self.ignore_patterns,
-            &extensions,
+            &file_extensions,
         )?;
         checker.report_diagnostics()
     }
@@ -228,8 +242,14 @@ impl Checker {
             is_external: canonical_path.starts_with(&self.bazel_info.output_base),
         });
 
-        let file_id = self.interner.intern_path(canonical_path);
-        change.create_file(file_id, dialect, info, contents.clone());
+        let file_id = self.interner.intern_path(canonical_path.clone());
+        change.create_file_with_path(
+            file_id,
+            canonical_path.to_string_lossy().to_string(),
+            dialect,
+            info,
+            contents.clone(),
+        );
         self.files.insert(
             file_id,
             FileMetadata {

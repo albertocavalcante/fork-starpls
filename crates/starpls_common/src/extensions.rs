@@ -88,6 +88,101 @@ impl Extensions {
                     .map(move |symbol| (module_name.as_str(), symbol))
             })
     }
+
+    /// Generate prelude content for a specific file path.
+    /// Returns Starlark code containing extension symbols that match the file.
+    pub fn generate_prelude_for_file(&self, file_path: &Path) -> Option<String> {
+        let globals = self.globals_for_file(file_path);
+
+        if globals.is_empty() {
+            return None;
+        }
+
+        let mut prelude_content = String::new();
+        prelude_content.push_str("# Auto-generated extension prelude\n");
+        prelude_content.push_str(&format!("# Generated for file: {}\n\n", file_path.display()));
+
+        for symbol in globals {
+            let doc = if symbol.doc.is_empty() { "" } else { &symbol.doc };
+
+            if symbol.r#type == "function" && symbol.callable.is_some() {
+                // Generate function definition
+                let callable = symbol.callable.as_ref().unwrap();
+                let params = callable.params.iter()
+                    .map(|p| {
+                        if !p.default_value.is_empty() {
+                            format!("{} = {}", p.name, p.default_value)
+                        } else {
+                            p.name.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                prelude_content.push_str(&format!(
+                    "def {}({}):\n    \"\"\"{}\"\"\"\n    pass\n\n",
+                    symbol.name, params, doc
+                ));
+            } else if symbol.as_type && !symbol.properties.is_empty() {
+                // Generate struct-like object with methods
+                prelude_content.push_str(&format!(
+                    "# Type: {}\n", symbol.r#type
+                ));
+
+                // Create a struct with the properties as methods/fields
+                let mut struct_fields = Vec::new();
+
+                for (prop_name, prop_symbol) in &symbol.properties {
+                    if prop_symbol.r#type == "function" && prop_symbol.callable.is_some() {
+                        // Add method
+                        let prop_callable = prop_symbol.callable.as_ref().unwrap();
+                        let prop_params = prop_callable.params.iter()
+                            .map(|p| {
+                                if !p.default_value.is_empty() {
+                                    format!("{} = {}", p.name, p.default_value)
+                                } else {
+                                    p.name.clone()
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+
+                        struct_fields.push(format!(
+                            "    {} = lambda {}: None,  # {}",
+                            prop_name, prop_params, prop_symbol.doc
+                        ));
+                    } else {
+                        // Add field
+                        struct_fields.push(format!(
+                            "    {} = None,  # {}: {}",
+                            prop_name, prop_symbol.r#type, prop_symbol.doc
+                        ));
+                    }
+                }
+
+                prelude_content.push_str(&format!(
+                    "{} = struct(\n{}\n)\n\n",
+                    symbol.name,
+                    struct_fields.join("\n")
+                ));
+            } else {
+                // Simple variable
+                if symbol.r#type.is_empty() {
+                    prelude_content.push_str(&format!(
+                        "{} = None  # {}\n\n",
+                        symbol.name, doc
+                    ));
+                } else {
+                    prelude_content.push_str(&format!(
+                        "{} = None  # {}: {}\n\n",
+                        symbol.name, symbol.r#type, doc
+                    ));
+                }
+            }
+        }
+
+        Some(prelude_content)
+    }
 }
 
 /// A single extension that can modify dialect behavior.

@@ -808,6 +808,10 @@ impl FileLoader for DefaultFileLoader {
             None
         }
     }
+
+    fn extensions(&self) -> Option<&starpls_common::Extensions> {
+        Some(&self.extensions)
+    }
 }
 
 fn read_dir_packages_and_targets(
