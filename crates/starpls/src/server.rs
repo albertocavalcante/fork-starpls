@@ -19,6 +19,7 @@ use starpls_bazel::client::BazelClient;
 use starpls_bazel::decode_builtins;
 use starpls_bazel::APIContext;
 use starpls_bazel::Builtins;
+use starpls_bazel::BuiltinsExt;
 use starpls_common::Dialect;
 use starpls_common::FileId;
 use starpls_common::FileInfo;
@@ -118,24 +119,6 @@ impl Server {
             Default::default()
         };
 
-        // Load extensions from JSON files
-        let extensions = if !config.args.extension_files.is_empty() {
-            info!("Loading extensions...");
-
-            match starpls_common::load_extensions(&config.args.extension_files) {
-                Ok(extensions) => {
-                    info!("✓ Loaded extension(s) successfully");
-                    Arc::new(extensions)
-                }
-                Err(e) => {
-                    error!("Failed to load extensions: {}", e);
-                    return Err(e);
-                }
-            }
-        } else {
-            Arc::new(starpls_common::Extensions::new())
-        };
-
         let path_interner = Arc::new(PathInterner::default());
         let loader = DefaultFileLoader::new(
             bazel_client.clone(),
@@ -145,8 +128,7 @@ impl Server {
             bazel_cx.info.output_base.join("external"),
             task_pool_sender.clone(),
             bazel_cx.bzlmod_enabled,
-        )
-        .with_extensions(extensions.clone());
+        );
         let mut analysis = Analysis::new(
             Arc::new(loader),
             InferenceOptions {
@@ -158,8 +140,21 @@ impl Server {
 
         analysis.set_all_workspace_targets(targets);
 
-        // Load base builtins (extensions now handled via file-specific preludes)
-        let builtins = load_bazel_builtins();
+        // Load base builtins and merge with custom stubs
+        let mut builtins = load_bazel_builtins();
+        if !config.args.stub_paths.is_empty() {
+            info!("Loading custom stubs...");
+            match starpls_stubs::load_custom_stubs(&config.args.stub_paths) {
+                Ok(custom_builtins) => {
+                    info!("✓ Loaded custom stub(s) successfully");
+                    builtins.merge(custom_builtins);
+                }
+                Err(e) => {
+                    error!("Failed to load custom stubs: {}", e);
+                    return Err(e.into());
+                }
+            }
+        }
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
 
         // Check for a prelude file. We skip verifying that `//tools/build_tools` is actually a package (i.e.
@@ -401,7 +396,3 @@ fn load_bazel_prelude(workspace: impl AsRef<Path>) -> anyhow::Result<(PathBuf, S
     let contents = fs::read_to_string(&prelude)?;
     Ok((prelude, contents))
 }
-
-// Note: Extension global injection functions have been removed.
-// Extensions are now processed per-file using file-specific preludes
-// to support proper when clause handling.

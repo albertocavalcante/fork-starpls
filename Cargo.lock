@@ -1503,6 +1503,7 @@ dependencies = [
  "starpls_common",
  "starpls_hir",
  "starpls_ide",
+ "starpls_stubs",
  "starpls_syntax",
  "tempfile",
  "walkdir",

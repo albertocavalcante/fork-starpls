@@ -44,9 +44,9 @@ pub(crate) struct ServerCommand {
     #[clap(long = "analysis_debounce_interval", default_value_t = 250)]
     pub(crate) analysis_debounce_interval: u64,
 
-    /// Load extension files with symbols, virtual modules, and configuration
-    #[clap(long = "experimental_load_extensions", value_name = "FILE")]
-    pub(crate) extension_files: Vec<PathBuf>,
+    /// Load custom stub files with symbols and type definitions
+    #[clap(long = "stub-paths", value_name = "FILE")]
+    pub(crate) stub_paths: Vec<PathBuf>,
 
     #[command(flatten)]
     pub(crate) inference_options: InferenceOptions,
@@ -54,8 +54,8 @@ pub(crate) struct ServerCommand {
 
 impl ServerCommand {
     pub(crate) fn run(self) -> anyhow::Result<()> {
-        // Validate extension files exist before starting server
-        self.validate_extension_files()?;
+        // Validate stub files exist before starting server
+        self.validate_stub_files()?;
 
         info!("starpls, v{}", get_version());
 
@@ -96,13 +96,13 @@ impl ServerCommand {
         Ok(())
     }
 
-    /// Validate that all specified extension files exist.
-    fn validate_extension_files(&self) -> anyhow::Result<()> {
-        // Validate extension files
-        for file_path in &self.extension_files {
+    /// Validate that all specified stub files exist.
+    fn validate_stub_files(&self) -> anyhow::Result<()> {
+        // Validate stub files
+        for file_path in &self.stub_paths {
             if !file_path.exists() {
                 anyhow::bail!(
-                    "Extension file does not exist: {}\n\nMake sure the file path is correct and the file is accessible.",
+                    "Stub file does not exist: {}\n\nMake sure the file path is correct and the file is accessible.",
                     file_path.display()
                 );
             }

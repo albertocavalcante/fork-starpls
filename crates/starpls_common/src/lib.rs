@@ -14,15 +14,7 @@ pub use crate::diagnostics::DiagnosticTag;
 pub use crate::diagnostics::Diagnostics;
 pub use crate::diagnostics::FileRange;
 pub use crate::diagnostics::Severity;
-pub use crate::extensions::generate_schema;
-pub use crate::extensions::load_extensions;
-pub use crate::extensions::Extensions;
-pub use crate::extensions::Symbol;
-pub use crate::type_expr::TypeExpr;
-
 mod diagnostics;
-mod extensions;
-mod type_expr;
 mod util;
 
 #[salsa::jar(db = Db)]
@@ -76,17 +68,6 @@ pub trait Db: salsa::DbWithJar<Jar> {
     fn create_file(
         &mut self,
         file_id: FileId,
-        dialect: Dialect,
-        info: Option<FileInfo>,
-        contents: String,
-    ) -> File;
-
-    /// Creates a `File` in the database with path information for extension processing.
-    /// This will overwrite the currently active `File` for the given `FileId`, if it exists.
-    fn create_file_with_path(
-        &mut self,
-        file_id: FileId,
-        file_path: &str,
         dialect: Dialect,
         info: Option<FileInfo>,
         contents: String,
