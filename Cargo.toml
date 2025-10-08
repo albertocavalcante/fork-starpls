@@ -9,6 +9,7 @@ members = [
     "crates/starpls_intern",
     "crates/starpls_lexer",
     "crates/starpls_parser",
+    "crates/starpls_stubs",
     "crates/starpls_syntax",
     "crates/starpls_test_util",
     "vendor/runfiles",
