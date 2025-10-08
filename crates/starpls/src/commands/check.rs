@@ -15,6 +15,7 @@ use clap::Args;
 use starpls_bazel::client::BazelCLI;
 use starpls_bazel::client::BazelInfo;
 use starpls_bazel::Builtins;
+use starpls_ext::load_custom_extensions;
 use starpls_common::Diagnostic;
 use starpls_common::Dialect;
 use starpls_common::FileId;
@@ -49,9 +50,9 @@ pub(crate) struct CheckCommand {
     #[clap(long = "ext")]
     pub(crate) extensions: Vec<String>,
 
-    /// Load custom stub files with symbols and type definitions
-    #[clap(long = "stub-paths", value_name = "FILE")]
-    pub(crate) stub_paths: Vec<std::path::PathBuf>,
+    /// Load custom extension files with symbols and type definitions
+    #[clap(long = "ext-paths", value_name = "FILE")]
+    pub(crate) ext_paths: Vec<std::path::PathBuf>,
 
     #[command(flatten)]
     pub(crate) inference_options: InferenceOptions,
@@ -89,9 +90,9 @@ impl CheckCommand {
         // Set builtins for Bazel dialect (original behavior)
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
         
-        // Load custom stubs only for Standard dialect (.star files)
-        if !self.stub_paths.is_empty() {
-            let custom_builtins = starpls_stubs::load_custom_stubs(&self.stub_paths)?;
+        // Load custom extensions only for Standard dialect (.star files)
+        if !self.ext_paths.is_empty() {
+            let custom_builtins = load_custom_extensions(&self.ext_paths)?;
             analysis.set_builtin_defs_for_dialect(starpls_common::Dialect::Standard, custom_builtins, Builtins::default());
         }
 

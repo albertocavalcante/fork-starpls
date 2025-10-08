@@ -4,7 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 package(default_visibility = ["//visibility:public"])
 
 rust_library(
-    name = "starpls_stubs",
+    name = "starpls_ext",
     srcs = glob(["src/**/*.rs"]),
     deps = all_crate_deps() + [
         "//crates/starpls_bazel",

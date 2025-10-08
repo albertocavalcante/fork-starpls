@@ -40,7 +40,7 @@ crate.from_cargo(
         "//crates/starpls_intern:Cargo.toml",
         "//crates/starpls_lexer:Cargo.toml",
         "//crates/starpls_parser:Cargo.toml",
-        "//crates/starpls_stubs:Cargo.toml",
+        "//crates/starpls_ext:Cargo.toml",
         "//crates/starpls_syntax:Cargo.toml",
         "//crates/starpls_test_util:Cargo.toml",
         "//vendor/runfiles:Cargo.toml",

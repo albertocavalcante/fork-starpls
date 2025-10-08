@@ -1501,9 +1501,9 @@ dependencies = [
  "serde_json",
  "starpls_bazel",
  "starpls_common",
+ "starpls_ext",
  "starpls_hir",
  "starpls_ide",
- "starpls_stubs",
  "starpls_syntax",
  "tempfile",
  "walkdir",
@@ -1538,6 +1538,19 @@ dependencies = [
  "starpls_bazel",
  "starpls_syntax",
  "tempfile",
+]
+
+[[package]]
+name = "starpls_ext"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glob",
+ "serde",
+ "serde_json",
+ "starpls_bazel",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -1606,19 +1619,6 @@ dependencies = [
  "expect-test",
  "runfiles",
  "starpls_lexer",
-]
-
-[[package]]
-name = "starpls_stubs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "glob",
- "serde",
- "serde_json",
- "starpls_bazel",
- "tempfile",
- "thiserror",
 ]
 
 [[package]]
