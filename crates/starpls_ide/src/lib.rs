@@ -321,6 +321,10 @@ impl Analysis {
         self.db.set_builtin_defs(Dialect::Bazel, builtins, rules);
     }
 
+    pub fn set_builtin_defs_for_dialect(&mut self, dialect: Dialect, builtins: Builtins, rules: Builtins) {
+        self.db.set_builtin_defs(dialect, builtins, rules);
+    }
+
     pub fn set_bazel_prelude_file(&mut self, file_id: FileId) {
         self.db.set_bazel_prelude_file(file_id);
     }

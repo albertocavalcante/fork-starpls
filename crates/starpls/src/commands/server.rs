@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Args;
 use log::info;
 use lsp_server::Connection;
@@ -42,12 +44,19 @@ pub(crate) struct ServerCommand {
     #[clap(long = "analysis_debounce_interval", default_value_t = 250)]
     pub(crate) analysis_debounce_interval: u64,
 
+    /// Load custom extension files with symbols and type definitions
+    #[clap(long = "ext-paths", value_name = "FILE")]
+    pub(crate) ext_paths: Vec<PathBuf>,
+
     #[command(flatten)]
     pub(crate) inference_options: InferenceOptions,
 }
 
 impl ServerCommand {
     pub(crate) fn run(self) -> anyhow::Result<()> {
+        // Validate extension files exist before starting server
+        self.validate_extension_files()?;
+
         info!("starpls, v{}", get_version());
 
         // Create the transport over stdio.
@@ -83,6 +92,21 @@ impl ServerCommand {
         // Graceful shutdown.
         info!("connection closed, exiting");
         io_threads.join()?;
+
+        Ok(())
+    }
+
+    /// Validate that all specified extension files exist.
+    fn validate_extension_files(&self) -> anyhow::Result<()> {
+        // Validate extension files
+        for file_path in &self.ext_paths {
+            if !file_path.exists() {
+                anyhow::bail!(
+                    "Extension file does not exist: {}\n\nMake sure the file path is correct and the file is accessible.",
+                    file_path.display()
+                );
+            }
+        }
 
         Ok(())
     }
