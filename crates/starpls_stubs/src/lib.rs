@@ -23,6 +23,19 @@ pub mod validator;
 use error::StubError;
 use loader::StubLoader;
 
+/// Extension trait for Builtins to add merge functionality
+pub trait BuiltinsExt {
+    /// Merge another Builtins into this one, adding all types and globals
+    fn merge(&mut self, other: Builtins);
+}
+
+impl BuiltinsExt for Builtins {
+    fn merge(&mut self, other: Builtins) {
+        self.r#type.extend(other.r#type);
+        self.global.extend(other.global);
+    }
+}
+
 /// Main entry point for loading custom stubs.
 ///
 /// This function loads stub files and converts them to Starpls builtin format,

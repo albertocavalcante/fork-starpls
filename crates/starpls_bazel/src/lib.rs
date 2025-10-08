@@ -6,29 +6,12 @@ use std::path::PathBuf;
 use prost::Message;
 
 pub use crate::builtin::Builtins;
-// pub use crate::dialect::create_bazel_dialect; // Temporarily commented out due to circular dependency
-pub use crate::dialect::BazelBuiltinProvider;
-pub use crate::dialect::BazelDialectDetector;
 pub use crate::label::Label;
 pub use crate::label::ParseError;
-
-// Extension trait for Builtins to add merge functionality
-pub trait BuiltinsExt {
-    /// Merge another Builtins into this one, adding all types and globals
-    fn merge(&mut self, other: Builtins);
-}
-
-impl BuiltinsExt for Builtins {
-    fn merge(&mut self, other: Builtins) {
-        self.r#type.extend(other.r#type);
-        self.global.extend(other.global);
-    }
-}
 
 pub mod attr;
 pub mod build_language;
 pub mod client;
-pub mod dialect;
 pub mod env;
 pub mod label;
 

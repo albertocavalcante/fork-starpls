@@ -19,7 +19,7 @@ use starpls_bazel::client::BazelClient;
 use starpls_bazel::decode_builtins;
 use starpls_bazel::APIContext;
 use starpls_bazel::Builtins;
-use starpls_bazel::BuiltinsExt;
+use starpls_stubs::BuiltinsExt;
 use starpls_common::Dialect;
 use starpls_common::FileId;
 use starpls_common::FileInfo;
