@@ -14,6 +14,8 @@ use anyhow::bail;
 use clap::Args;
 use starpls_bazel::client::BazelCLI;
 use starpls_bazel::client::BazelInfo;
+use starpls_bazel::Builtins;
+use starpls_ext::load_custom_extensions;
 use starpls_common::Diagnostic;
 use starpls_common::Dialect;
 use starpls_common::FileId;
@@ -48,6 +50,10 @@ pub(crate) struct CheckCommand {
     #[clap(long = "ext")]
     pub(crate) extensions: Vec<String>,
 
+    /// Load custom extension files with symbols and type definitions
+    #[clap(long = "ext-paths", value_name = "FILE")]
+    pub(crate) ext_paths: Vec<std::path::PathBuf>,
+
     #[command(flatten)]
     pub(crate) inference_options: InferenceOptions,
 }
@@ -57,7 +63,9 @@ impl CheckCommand {
         let bazel_client = Arc::new(BazelCLI::default());
         let bazel_cx = BazelContext::new(&*bazel_client)
             .map_err(|err| anyhow!("failed to initialize Bazel context: {}", err))?;
+        // Load base builtins (no custom stubs mixed in)
         let builtins = load_bazel_builtins();
+
         let (fetch_repo_sender, _) = crossbeam_channel::unbounded();
         let interner = Arc::new(PathInterner::default());
         let loader = DefaultFileLoader::new(
@@ -79,11 +87,18 @@ impl CheckCommand {
             },
         );
 
+        // Set builtins for Bazel dialect (original behavior)
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
+        
+        // Load custom extensions only for Standard dialect (.star files)
+        if !self.ext_paths.is_empty() {
+            let custom_builtins = load_custom_extensions(&self.ext_paths)?;
+            analysis.set_builtin_defs_for_dialect(starpls_common::Dialect::Standard, custom_builtins, Builtins::default());
+        }
 
         // Strip off the leading "." from each of the specified extensions.
         // This works better when filtering against files with .extension().
-        let extensions = self
+        let file_extensions = self
             .extensions
             .iter()
             .map(|ext| match ext.strip_prefix('.') {
@@ -99,7 +114,7 @@ impl CheckCommand {
             interner,
             self.paths,
             self.ignore_patterns,
-            &extensions,
+            &file_extensions,
         )?;
         checker.report_diagnostics()
     }
@@ -228,7 +243,7 @@ impl Checker {
             is_external: canonical_path.starts_with(&self.bazel_info.output_base),
         });
 
-        let file_id = self.interner.intern_path(canonical_path);
+        let file_id = self.interner.intern_path(canonical_path.clone());
         change.create_file(file_id, dialect, info, contents.clone());
         self.files.insert(
             file_id,

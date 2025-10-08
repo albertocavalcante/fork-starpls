@@ -14,7 +14,6 @@ pub use crate::diagnostics::DiagnosticTag;
 pub use crate::diagnostics::Diagnostics;
 pub use crate::diagnostics::FileRange;
 pub use crate::diagnostics::Severity;
-
 mod diagnostics;
 mod util;
 
