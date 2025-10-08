@@ -64,7 +64,7 @@ pub(crate) struct Database {
     loader: Arc<dyn FileLoader>,
     gcx: Arc<GlobalContext>,
     prelude_file: Option<FileId>,
-    file_preludes: Arc<DashMap<FileId, FileId>>,  // file_id -> prelude_file_id
+    file_preludes: Arc<DashMap<FileId, FileId>>, // file_id -> prelude_file_id
     all_workspace_targets: Arc<Vec<String>>,
 }
 

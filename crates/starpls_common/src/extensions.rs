@@ -100,15 +100,24 @@ impl Extensions {
 
         let mut prelude_content = String::new();
         prelude_content.push_str("# Auto-generated extension prelude\n");
-        prelude_content.push_str(&format!("# Generated for file: {}\n\n", file_path.display()));
+        prelude_content.push_str(&format!(
+            "# Generated for file: {}\n\n",
+            file_path.display()
+        ));
 
         for symbol in globals {
-            let doc = if symbol.doc.is_empty() { "" } else { &symbol.doc };
+            let doc = if symbol.doc.is_empty() {
+                ""
+            } else {
+                &symbol.doc
+            };
 
             if symbol.r#type == "function" && symbol.callable.is_some() {
                 // Generate function definition
                 let callable = symbol.callable.as_ref().unwrap();
-                let params = callable.params.iter()
+                let params = callable
+                    .params
+                    .iter()
                     .map(|p| {
                         if !p.default_value.is_empty() {
                             format!("{} = {}", p.name, p.default_value)
@@ -125,9 +134,7 @@ impl Extensions {
                 ));
             } else if symbol.as_type && !symbol.properties.is_empty() {
                 // Generate struct-like object with methods
-                prelude_content.push_str(&format!(
-                    "# Type: {}\n", symbol.r#type
-                ));
+                prelude_content.push_str(&format!("# Type: {}\n", symbol.r#type));
 
                 // Create a struct with the properties as methods/fields
                 let mut struct_fields = Vec::new();
@@ -136,7 +143,9 @@ impl Extensions {
                     if prop_symbol.r#type == "function" && prop_symbol.callable.is_some() {
                         // Add method
                         let prop_callable = prop_symbol.callable.as_ref().unwrap();
-                        let prop_params = prop_callable.params.iter()
+                        let prop_params = prop_callable
+                            .params
+                            .iter()
                             .map(|p| {
                                 if !p.default_value.is_empty() {
                                     format!("{} = {}", p.name, p.default_value)
@@ -168,10 +177,7 @@ impl Extensions {
             } else {
                 // Simple variable
                 if symbol.r#type.is_empty() {
-                    prelude_content.push_str(&format!(
-                        "{} = None  # {}\n\n",
-                        symbol.name, doc
-                    ));
+                    prelude_content.push_str(&format!("{} = None  # {}\n\n", symbol.name, doc));
                 } else {
                     prelude_content.push_str(&format!(
                         "{} = None  # {}: {}\n\n",

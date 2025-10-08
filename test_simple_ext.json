@@ -1,0 +1,48 @@
+{
+  "when": {
+    "file_patterns": ["*.star"]
+  },
+  "globals": [
+    {
+      "name": "dev_config",
+      "type": "DevConfig",
+      "doc": "Global development configuration object",
+      "as_type": true,
+      "properties": {
+        "debug": {
+          "name": "debug",
+          "type": "function",
+          "doc": "Enable debug mode for development",
+          "callable": {
+            "params": [
+              {
+                "name": "enabled",
+                "type": "bool",
+                "doc": "Whether to enable debug mode",
+                "default_value": "True"
+              }
+            ],
+            "return_type": "None"
+          }
+        }
+      }
+    },
+    {
+      "name": "notify",
+      "type": "function",
+      "doc": "Send notifications during development workflow",
+      "callable": {
+        "params": [
+          {
+            "name": "message",
+            "type": "string",
+            "doc": "Notification message to display"
+          }
+        ],
+        "return_type": "None"
+      }
+    }
+  ],
+  "modules": {},
+  "configuration": {}
+}

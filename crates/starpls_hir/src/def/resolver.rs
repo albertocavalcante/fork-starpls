@@ -124,7 +124,9 @@ impl<'a> Resolver<'a> {
         // 1. FIRST: Check file-specific extension prelude
         if let Some(prelude_file_id) = self.db.get_file_prelude(self.file.id(self.db)) {
             if let Some(prelude_file) = self.db.get_file(prelude_file_id) {
-                if let Some(def) = Self::new_for_module(self.db, prelude_file).resolve_name_from_prelude(name) {
+                if let Some(def) =
+                    Self::new_for_module(self.db, prelude_file).resolve_name_from_prelude(name)
+                {
                     return Some(def);
                 }
             }
@@ -138,7 +140,8 @@ impl<'a> Resolver<'a> {
                 .and_then(|prelude_file_id| {
                     let prelude_file = self.db.get_file(prelude_file_id)?;
                     Self::new_for_module(self.db, prelude_file).resolve_name_from_prelude(name)
-                }) {
+                })
+            {
                 return Some(def);
             }
         }
@@ -147,7 +150,8 @@ impl<'a> Resolver<'a> {
         if let Some(func) = intrinsic_functions(self.db)
             .functions(self.db)
             .get(name)
-            .copied() {
+            .copied()
+        {
             return Some(ScopeDef::IntrinsicFunction(func));
         }
 
