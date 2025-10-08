@@ -50,8 +50,8 @@ pub(crate) struct CheckCommand {
     #[clap(long = "ext")]
     pub(crate) extensions: Vec<String>,
 
-    /// Load custom extension files with symbols and type definitions
-    #[clap(long = "ext-paths", value_name = "FILE")]
+    /// Load custom extension files with symbols and type definitions (experimental)
+    #[clap(long = "experimental-load-extensions", value_name = "FILE")]
     pub(crate) ext_paths: Vec<std::path::PathBuf>,
 
     #[command(flatten)]

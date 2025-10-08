@@ -44,8 +44,8 @@ pub(crate) struct ServerCommand {
     #[clap(long = "analysis_debounce_interval", default_value_t = 250)]
     pub(crate) analysis_debounce_interval: u64,
 
-    /// Load custom extension files with symbols and type definitions
-    #[clap(long = "ext-paths", value_name = "FILE")]
+    /// Load custom extension files with symbols and type definitions (experimental)
+    #[clap(long = "experimental-load-extensions", value_name = "FILE")]
     pub(crate) ext_paths: Vec<PathBuf>,
 
     #[command(flatten)]
