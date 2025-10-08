@@ -21,6 +21,7 @@ use crate::def::ModuleSourceMap;
 use crate::source_map;
 use crate::typeck::builtins::builtin_globals;
 use crate::typeck::builtins::APIGlobals;
+use crate::typeck::builtins::BuiltinGlobals;
 use crate::typeck::intrinsics::intrinsic_functions;
 use crate::Db;
 use crate::Name;
@@ -146,8 +147,14 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_name_in_builtin_globals(&self, name: &Name) -> Option<ScopeDef> {
-        let api_context = self.file.api_context(self.db)?;
-        let globals = builtin_globals(self.db, self.file.dialect(self.db));
+        let api_context = self.file.api_context(self.db);
+        let dialect = self.file.dialect(self.db);
+        let globals = builtin_globals(self.db, dialect);
+        
+        // For Standard dialect without API context, use a simple fallback
+        if api_context.is_none() && dialect == starpls_common::Dialect::Standard {
+            return self.resolve_name_in_standard_builtins(name, &globals);
+        }
         let resolve_in_api_globals = |api_globals: &APIGlobals| {
             api_globals
                 .functions
@@ -163,17 +170,39 @@ impl<'a> Resolver<'a> {
                 })
         };
 
-        if api_context == APIContext::Repo {
+        if api_context == Some(APIContext::Repo) {
             return resolve_in_api_globals(globals.repo_globals(self.db));
         }
-        if api_context == APIContext::Cquery {
+        if api_context == Some(APIContext::Cquery) {
             return resolve_in_api_globals(globals.cquery_globals(self.db));
         }
         resolve_in_api_globals(globals.bzl_globals(self.db)).or_else(|| match api_context {
-            APIContext::Module => resolve_in_api_globals(globals.bzlmod_globals(self.db)),
-            APIContext::Workspace => resolve_in_api_globals(globals.workspace_globals(self.db)),
+            Some(APIContext::Module) => resolve_in_api_globals(globals.bzlmod_globals(self.db)),
+            Some(APIContext::Workspace) => resolve_in_api_globals(globals.workspace_globals(self.db)),
             _ => None,
         })
+    }
+
+    fn resolve_name_in_standard_builtins(&self, name: &Name, globals: &BuiltinGlobals) -> Option<ScopeDef> {
+        // For Standard dialect, use the bzl_globals as a fallback since they contain the most general builtins
+        let bzl_globals = globals.bzl_globals(self.db);
+        
+        let resolve_in_api_globals = |api_globals: &APIGlobals| {
+            api_globals
+                .functions
+                .get(name.as_str())
+                .copied()
+                .map(ScopeDef::BuiltinFunction)
+                .or_else(|| {
+                    api_globals
+                        .variables
+                        .get(name.as_str())
+                        .cloned()
+                        .map(ScopeDef::BuiltinVariable)
+                })
+        };
+        
+        resolve_in_api_globals(bzl_globals)
     }
 
     pub(crate) fn names(&self) -> FxHashMap<Name, ScopeDef> {

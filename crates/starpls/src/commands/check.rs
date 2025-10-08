@@ -14,7 +14,7 @@ use anyhow::bail;
 use clap::Args;
 use starpls_bazel::client::BazelCLI;
 use starpls_bazel::client::BazelInfo;
-use starpls_stubs::BuiltinsExt;
+use starpls_bazel::Builtins;
 use starpls_common::Diagnostic;
 use starpls_common::Dialect;
 use starpls_common::FileId;
@@ -62,12 +62,8 @@ impl CheckCommand {
         let bazel_client = Arc::new(BazelCLI::default());
         let bazel_cx = BazelContext::new(&*bazel_client)
             .map_err(|err| anyhow!("failed to initialize Bazel context: {}", err))?;
-        // Load base builtins and merge with custom stubs
-        let mut builtins = load_bazel_builtins();
-        if !self.stub_paths.is_empty() {
-            let custom_builtins = starpls_stubs::load_custom_stubs(&self.stub_paths)?;
-            builtins.merge(custom_builtins);
-        }
+        // Load base builtins (no custom stubs mixed in)
+        let builtins = load_bazel_builtins();
 
         let (fetch_repo_sender, _) = crossbeam_channel::unbounded();
         let interner = Arc::new(PathInterner::default());
@@ -90,7 +86,14 @@ impl CheckCommand {
             },
         );
 
+        // Set builtins for Bazel dialect (original behavior)
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
+        
+        // Load custom stubs only for Standard dialect (.star files)
+        if !self.stub_paths.is_empty() {
+            let custom_builtins = starpls_stubs::load_custom_stubs(&self.stub_paths)?;
+            analysis.set_builtin_defs_for_dialect(starpls_common::Dialect::Standard, custom_builtins, Builtins::default());
+        }
 
         // Strip off the leading "." from each of the specified extensions.
         // This works better when filtering against files with .extension().
