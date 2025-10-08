@@ -11,6 +11,7 @@ use crate::config::ServerConfig;
 use crate::convert;
 use crate::dispatcher::RequestDispatcher;
 use crate::document::DocumentSource;
+use crate::extensions;
 use crate::handlers::notifications;
 use crate::handlers::requests;
 use crate::server::Server;
@@ -208,6 +209,8 @@ impl Server {
 
     fn handle_request(&mut self, req: lsp_server::Request) {
         RequestDispatcher::new(req, self)
+            .on::<extensions::ShowSyntaxTree>(requests::show_syntax_tree)
+            .on::<extensions::ShowHir>(requests::show_hir)
             .on::<lsp_types::request::Completion>(requests::completion)
             .on::<lsp_types::request::DocumentSymbolRequest>(requests::document_symbols)
             .on::<lsp_types::request::GotoDefinition>(requests::goto_definition)

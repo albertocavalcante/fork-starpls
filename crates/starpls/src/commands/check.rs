@@ -15,12 +15,12 @@ use clap::Args;
 use starpls_bazel::client::BazelCLI;
 use starpls_bazel::client::BazelInfo;
 use starpls_bazel::Builtins;
-use starpls_ext::load_custom_extensions;
 use starpls_common::Diagnostic;
 use starpls_common::Dialect;
 use starpls_common::FileId;
 use starpls_common::FileInfo;
 use starpls_common::Severity;
+use starpls_ext::load_custom_extensions;
 use starpls_ide::Analysis;
 use starpls_ide::AnalysisSnapshot;
 use starpls_ide::Change;
@@ -89,11 +89,15 @@ impl CheckCommand {
 
         // Set builtins for Bazel dialect (original behavior)
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
-        
+
         // Load custom extensions only for Standard dialect (.star files)
         if !self.ext_paths.is_empty() {
             let custom_builtins = load_custom_extensions(&self.ext_paths)?;
-            analysis.set_builtin_defs_for_dialect(starpls_common::Dialect::Standard, custom_builtins, Builtins::default());
+            analysis.set_builtin_defs_for_dialect(
+                starpls_common::Dialect::Standard,
+                custom_builtins,
+                Builtins::default(),
+            );
         }
 
         // Strip off the leading "." from each of the specified extensions.
