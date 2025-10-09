@@ -5,14 +5,14 @@ use starpls_bazel::builtin::Value;
 use starpls_bazel::APIContext;
 use starpls_bazel::Builtins;
 
-use crate::error::StubError;
-use crate::types::StubCallable;
-use crate::types::StubDefinition;
-use crate::types::StubParam;
-use crate::types::StubSymbol;
+use crate::error::ExtensionError;
+use crate::types::ExtensionCallable;
+use crate::types::ExtensionDefinition;
+use crate::types::ExtensionParam;
+use crate::types::ExtensionSymbol;
 
 /// Convert an extension definition to Starpls builtin format.
-pub fn convert_to_builtins(definition: &StubDefinition) -> Result<Builtins, StubError> {
+pub fn convert_to_builtins(definition: &ExtensionDefinition) -> Result<Builtins, ExtensionError> {
     let mut builtins = Builtins::default();
 
     for symbol in &definition.symbols {
@@ -23,7 +23,7 @@ pub fn convert_to_builtins(definition: &StubDefinition) -> Result<Builtins, Stub
     Ok(builtins)
 }
 
-fn convert_symbol_to_value(symbol: &StubSymbol) -> Result<Value, StubError> {
+fn convert_symbol_to_value(symbol: &ExtensionSymbol) -> Result<Value, ExtensionError> {
     let callable = if let Some(ref callable) = symbol.callable {
         Some(convert_callable(callable)?)
     } else {
@@ -39,7 +39,7 @@ fn convert_symbol_to_value(symbol: &StubSymbol) -> Result<Value, StubError> {
     })
 }
 
-fn convert_callable(callable: &StubCallable) -> Result<Callable, StubError> {
+fn convert_callable(callable: &ExtensionCallable) -> Result<Callable, ExtensionError> {
     let params = callable
         .params
         .iter()
@@ -52,7 +52,7 @@ fn convert_callable(callable: &StubCallable) -> Result<Callable, StubError> {
     })
 }
 
-fn convert_param(param: &StubParam) -> Result<Param, StubError> {
+fn convert_param(param: &ExtensionParam) -> Result<Param, ExtensionError> {
     Ok(Param {
         name: param.name.clone(),
         r#type: param.r#type.clone(),

@@ -19,8 +19,8 @@ pub mod parser;
 pub mod types;
 pub mod validator;
 
-use error::StubError;
-use loader::StubLoader;
+use error::ExtensionError;
+use loader::ExtensionLoader;
 
 /// Extension trait for Builtins to add merge functionality
 pub trait BuiltinsExt {
@@ -36,26 +36,26 @@ impl BuiltinsExt for Builtins {
 }
 
 /// Main entry point for loading custom extensions.
-pub fn load_custom_extensions(ext_paths: &[impl AsRef<Path>]) -> Result<Builtins, StubError> {
-    let mut loader = StubLoader::new();
+pub fn load_custom_extensions(ext_paths: &[impl AsRef<Path>]) -> Result<Builtins, ExtensionError> {
+    let mut loader = ExtensionLoader::new();
 
     for path in ext_paths {
-        loader.load_stub_file(path.as_ref())?;
+        loader.load_extension_file(path.as_ref())?;
     }
 
     loader.into_builtins()
 }
 
 /// Load a single JSON extension file and return builtin definitions.
-pub fn load_single_extension(path: impl AsRef<Path>) -> Result<Builtins, StubError> {
-    let mut loader = StubLoader::new();
-    loader.load_stub_file(path.as_ref())?;
+pub fn load_single_extension(path: impl AsRef<Path>) -> Result<Builtins, ExtensionError> {
+    let mut loader = ExtensionLoader::new();
+    loader.load_extension_file(path.as_ref())?;
     loader.into_builtins()
 }
 
 /// Validate a JSON extension file without loading it.
-pub fn validate_extension_file(path: impl AsRef<Path>) -> Result<(), StubError> {
-    let definition = parser::parse_stub_file(path.as_ref())?;
-    validator::validate_stub_definition(&definition)?;
+pub fn validate_extension_file(path: impl AsRef<Path>) -> Result<(), ExtensionError> {
+    let definition = parser::parse_extension_file(path.as_ref())?;
+    validator::validate_extension_definition(&definition)?;
     Ok(())
 }

@@ -1,14 +1,14 @@
-use crate::error::StubError;
-use crate::types::StubDefinition;
+use crate::error::ExtensionError;
+use crate::types::ExtensionDefinition;
 
-/// Validate a stub definition.
-pub fn validate_stub_definition(definition: &StubDefinition) -> Result<(), StubError> {
+/// Validate an extension definition.
+pub fn validate_extension_definition(definition: &ExtensionDefinition) -> Result<(), ExtensionError> {
     // Validate that all symbols have unique names
     let mut seen_symbols = std::collections::HashSet::new();
 
     for symbol in &definition.symbols {
         if !seen_symbols.insert(&symbol.name) {
-            return Err(StubError::DuplicateSymbol {
+            return Err(ExtensionError::DuplicateSymbol {
                 symbol: symbol.name.clone(),
             });
         }
@@ -20,16 +20,16 @@ pub fn validate_stub_definition(definition: &StubDefinition) -> Result<(), StubE
     Ok(())
 }
 
-fn validate_symbol(symbol: &crate::types::StubSymbol) -> Result<(), StubError> {
+fn validate_symbol(symbol: &crate::types::ExtensionSymbol) -> Result<(), ExtensionError> {
     if symbol.name.trim().is_empty() {
-        return Err(StubError::ValidationError {
+        return Err(ExtensionError::ValidationError {
             message: "Symbol name cannot be empty".to_string(),
         });
     }
 
     // Validate that the symbol name is a valid identifier
     if !is_valid_identifier(&symbol.name) {
-        return Err(StubError::ValidationError {
+        return Err(ExtensionError::ValidationError {
             message: format!("Invalid symbol name: '{}'", symbol.name),
         });
     }

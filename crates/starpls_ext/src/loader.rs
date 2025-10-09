@@ -4,15 +4,15 @@ use anyhow::Result;
 use starpls_bazel::Builtins;
 
 use crate::converter::convert_to_builtins;
-use crate::error::StubError;
-use crate::parser::parse_stub_file;
+use crate::error::ExtensionError;
+use crate::parser::parse_extension_file;
 
 /// Loader for custom extension files.
-pub struct StubLoader {
+pub struct ExtensionLoader {
     builtins: Builtins,
 }
 
-impl StubLoader {
+impl ExtensionLoader {
     pub fn new() -> Self {
         Self {
             builtins: Builtins::default(),
@@ -20,15 +20,15 @@ impl StubLoader {
     }
 
     /// Load a single extension file and merge it into the builtins.
-    pub fn load_stub_file(&mut self, path: &Path) -> Result<(), StubError> {
-        let stub_definition = parse_stub_file(path)?;
-        let stub_builtins = convert_to_builtins(&stub_definition)?;
-        self.merge_builtins(stub_builtins);
+    pub fn load_extension_file(&mut self, path: &Path) -> Result<(), ExtensionError> {
+        let extension_definition = parse_extension_file(path)?;
+        let extension_builtins = convert_to_builtins(&extension_definition)?;
+        self.merge_builtins(extension_builtins);
         Ok(())
     }
 
     /// Convert the loaded extensions to builtins format.
-    pub fn into_builtins(self) -> Result<Builtins, StubError> {
+    pub fn into_builtins(self) -> Result<Builtins, ExtensionError> {
         Ok(self.builtins)
     }
 
@@ -38,7 +38,7 @@ impl StubLoader {
     }
 }
 
-impl Default for StubLoader {
+impl Default for ExtensionLoader {
     fn default() -> Self {
         Self::new()
     }

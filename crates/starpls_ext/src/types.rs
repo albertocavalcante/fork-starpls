@@ -2,14 +2,14 @@ use serde::Deserialize;
 
 /// An extension definition containing symbols to be loaded.
 #[derive(Debug, Clone, Deserialize)]
-pub struct StubDefinition {
+pub struct ExtensionDefinition {
     /// List of symbols defined in this extension file.
-    pub symbols: Vec<StubSymbol>,
+    pub symbols: Vec<ExtensionSymbol>,
 }
 
 /// A single symbol definition from an extension file.
 #[derive(Debug, Clone, Deserialize)]
-pub struct StubSymbol {
+pub struct ExtensionSymbol {
     /// Name of the symbol.
     pub name: String,
 
@@ -22,14 +22,14 @@ pub struct StubSymbol {
 
     /// Function signature if this is a callable symbol.
     #[serde(default)]
-    pub callable: Option<StubCallable>,
+    pub callable: Option<ExtensionCallable>,
 }
 
 /// Function signature for callable symbols.
 #[derive(Debug, Clone, Deserialize)]
-pub struct StubCallable {
+pub struct ExtensionCallable {
     /// Function parameters.
-    pub params: Vec<StubParam>,
+    pub params: Vec<ExtensionParam>,
 
     /// Return type.
     pub return_type: String,
@@ -37,7 +37,7 @@ pub struct StubCallable {
 
 /// Function parameter definition.
 #[derive(Debug, Clone, Deserialize)]
-pub struct StubParam {
+pub struct ExtensionParam {
     /// Parameter name.
     pub name: String,
 
