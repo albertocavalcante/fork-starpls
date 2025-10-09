@@ -36,6 +36,13 @@ impl BuiltinsExt for Builtins {
 }
 
 /// Main entry point for loading custom extensions.
+/// 
+/// Note: Currently, extensions are loaded for the Standard dialect only and use APIContext::Bzl,
+/// which means they appear in BZL context. Future enhancements should consider:
+/// - Path-specific extension loading (e.g., only for custom/**.star files)
+/// - Context-specific APIContext (e.g., APIContext::Star for .star files only)
+/// - File pattern matching for extension applicability
+/// - Preventing extensions from appearing in .bzl or BUILD files
 pub fn load_custom_extensions(ext_paths: &[impl AsRef<Path>]) -> Result<Builtins, ExtensionError> {
     let mut loader = ExtensionLoader::new();
 

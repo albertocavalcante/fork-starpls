@@ -35,6 +35,15 @@ fn convert_symbol_to_value(symbol: &ExtensionSymbol) -> Result<Value, ExtensionE
         r#type: symbol.r#type.clone(),
         doc: symbol.doc.clone(),
         callable,
+        // TODO: Consider creating a new APIContext::Star or APIContext::Extension for .star files
+        // Current approach uses APIContext::Bzl which makes extensions available in BZL context.
+        // This is not ideal because:
+        // 1. Extensions should not appear in .bzl or BUILD files (Bazel-specific contexts)
+        // 2. Extensions should be path-specific (e.g., only for custom/**.star files)
+        // 3. Future enhancement: Support file pattern matching for extension loading
+        //    (e.g., extensions only apply to files matching custom/**.star patterns)
+        // For now, using APIContext::Bzl as a compromise that works with existing resolver logic.
+        // The resolver uses bzl_globals as the fallback for Standard dialect files.
         api_context: APIContext::Bzl as i32,
     })
 }
