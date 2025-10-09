@@ -11,10 +11,7 @@ use crate::types::StubDefinition;
 use crate::types::StubParam;
 use crate::types::StubSymbol;
 
-/// Convert a stub definition to Starpls builtin format.
-///
-/// This follows the same pattern as `starpls_bazel::env` for converting
-/// external definitions to the internal builtin format.
+/// Convert an extension definition to Starpls builtin format.
 pub fn convert_to_builtins(definition: &StubDefinition) -> Result<Builtins, StubError> {
     let mut builtins = Builtins::default();
 

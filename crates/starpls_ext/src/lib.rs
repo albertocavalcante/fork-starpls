@@ -2,8 +2,7 @@
 Starlark extensions for Starpls.
 
 This crate provides functionality for loading custom extension files (JSON format)
-and converting them to Starpls builtin format, following the same pattern as
-`starpls_bazel` for modular extension support.
+and converting them to Starpls builtin format.
 */
 
 use std::path::Path;
@@ -37,9 +36,6 @@ impl BuiltinsExt for Builtins {
 }
 
 /// Main entry point for loading custom extensions.
-///
-/// This function loads JSON extension files and converts them to Starpls builtin format,
-/// following the same pattern as `starpls_bazel::load_builtins()`.
 pub fn load_custom_extensions(ext_paths: &[impl AsRef<Path>]) -> Result<Builtins, StubError> {
     let mut loader = StubLoader::new();
 

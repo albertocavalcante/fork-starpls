@@ -63,7 +63,6 @@ impl CheckCommand {
         let bazel_client = Arc::new(BazelCLI::default());
         let bazel_cx = BazelContext::new(&*bazel_client)
             .map_err(|err| anyhow!("failed to initialize Bazel context: {}", err))?;
-        // Load base builtins (no custom stubs mixed in)
         let builtins = load_bazel_builtins();
 
         let (fetch_repo_sender, _) = crossbeam_channel::unbounded();
@@ -87,10 +86,8 @@ impl CheckCommand {
             },
         );
 
-        // Set builtins for Bazel dialect (original behavior)
         analysis.set_builtin_defs(builtins, bazel_cx.rules);
 
-        // Load custom extensions only for Standard dialect (.star files)
         if !self.ext_paths.is_empty() {
             let custom_builtins = load_custom_extensions(&self.ext_paths)?;
             analysis.set_builtin_defs_for_dialect(

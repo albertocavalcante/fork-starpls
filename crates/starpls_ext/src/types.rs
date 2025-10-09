@@ -1,16 +1,13 @@
 use serde::Deserialize;
 
-/// A stub definition containing symbols to be loaded.
-///
-/// This follows the same pattern as the extension system but is focused
-/// on stub file loading rather than runtime extension.
+/// An extension definition containing symbols to be loaded.
 #[derive(Debug, Clone, Deserialize)]
 pub struct StubDefinition {
-    /// List of symbols defined in this stub file.
+    /// List of symbols defined in this extension file.
     pub symbols: Vec<StubSymbol>,
 }
 
-/// A single symbol definition from a stub file.
+/// A single symbol definition from an extension file.
 #[derive(Debug, Clone, Deserialize)]
 pub struct StubSymbol {
     /// Name of the symbol.
