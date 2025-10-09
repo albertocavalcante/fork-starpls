@@ -19,6 +19,8 @@ use starpls_bazel::client::BazelClient;
 use starpls_bazel::decode_builtins;
 use starpls_bazel::APIContext;
 use starpls_bazel::Builtins;
+use starpls_ext::BuiltinsExt;
+use starpls_ext::load_custom_extensions;
 use starpls_common::Dialect;
 use starpls_common::FileId;
 use starpls_common::FileInfo;
@@ -138,7 +140,23 @@ impl Server {
         );
 
         analysis.set_all_workspace_targets(targets);
-        analysis.set_builtin_defs(load_bazel_builtins(), bazel_cx.rules);
+
+        // Load base builtins and merge with custom stubs
+        let mut builtins = load_bazel_builtins();
+        if !config.args.ext_paths.is_empty() {
+            info!("Loading custom extensions...");
+            match load_custom_extensions(&config.args.ext_paths) {
+                Ok(custom_builtins) => {
+                    info!("✓ Loaded custom extension(s) successfully");
+                    builtins.merge(custom_builtins);
+                }
+                Err(e) => {
+                    error!("Failed to load custom extensions: {}", e);
+                    return Err(e.into());
+                }
+            }
+        }
+        analysis.set_builtin_defs(builtins, bazel_cx.rules);
 
         // Check for a prelude file. We skip verifying that `//tools/build_tools` is actually a package (i.e.
         // that it actually contains a `BUILD.bazel`) file for simplicity.

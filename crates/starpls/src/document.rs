@@ -201,6 +201,7 @@ pub(crate) struct DefaultFileLoader {
     cached_load_results: DashMap<String, PathBuf>,
     fetch_repo_sender: Sender<Task>,
     bzlmod_enabled: bool,
+    load_prefix: Option<String>,
 }
 
 impl DefaultFileLoader {
@@ -222,6 +223,7 @@ impl DefaultFileLoader {
             cached_load_results: Default::default(),
             fetch_repo_sender,
             bzlmod_enabled,
+            load_prefix: None,
         }
     }
 
@@ -448,8 +450,20 @@ impl FileLoader for DefaultFileLoader {
                 let mut from_path = self.interner.lookup_by_file_id(from);
                 assert!(from_path.pop());
 
+                // Apply load_prefix if configured
+                let resolved_path = if let Some(ref prefix) = self.load_prefix {
+                    let prefixed_path = if path.is_empty() {
+                        format!("{}/", prefix.trim_end_matches('/'))
+                    } else {
+                        format!("{}/{}", prefix.trim_end_matches('/'), path)
+                    };
+                    from_path.join(prefixed_path)
+                } else {
+                    from_path.join(path)
+                };
+
                 // Resolve the given path relative to the importing file's directory.
-                (from_path.join(path).canonicalize()?, None, None)
+                (resolved_path.canonicalize()?, None, None)
             }
             Dialect::Bazel => {
                 // Parse the load path as a Bazel label.

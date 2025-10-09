@@ -1,0 +1,18 @@
+load("@crates//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "starpls_ext",
+    srcs = glob(["src/**/*.rs"]),
+    deps = all_crate_deps() + [
+        "//crates/starpls_bazel",
+    ],
+)
+
+rust_test(
+    name = "starpls_stubs_test",
+    crate = ":starpls_stubs",
+    deps = all_crate_deps(normal_dev = True),
+)

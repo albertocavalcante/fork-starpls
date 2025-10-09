@@ -24,7 +24,6 @@ use crate::Dialect;
 use crate::GlobalContext;
 use crate::InferenceOptions;
 
-#[derive(Default)]
 #[salsa::db(starpls_common::Jar, crate::Jar)]
 pub(crate) struct TestDatabase {
     builtin_defs: Arc<DashMap<Dialect, BuiltinDefs>>,
@@ -33,6 +32,19 @@ pub(crate) struct TestDatabase {
     prelude_file: Option<FileId>,
     all_workspace_targets: Arc<Vec<String>>,
     pub(crate) gcx: Arc<GlobalContext>,
+}
+
+impl Default for TestDatabase {
+    fn default() -> Self {
+        Self {
+            builtin_defs: Default::default(),
+            storage: Default::default(),
+            files: Default::default(),
+            prelude_file: None,
+            all_workspace_targets: Arc::default(),
+            gcx: Arc::new(GlobalContext::new(InferenceOptions::default())),
+        }
+    }
 }
 
 impl salsa::Database for TestDatabase {}
